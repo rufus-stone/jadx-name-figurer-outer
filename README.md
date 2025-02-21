@@ -1,7 +1,7 @@
 
 ## JADX Name Figurer-Outer plugin
 
-Simple plugin to rename fields based on the strings passed to method's like JSONObject's getString() and friends.
+Simple plugin to rename fields based on the strings passed to methods like JSONObject's getString() and friends.
 
 ### Usage
 
