@@ -1,4 +1,4 @@
-package jadx.plugins.example;
+package jadx.plugins.tfoc;
 
 import jadx.api.plugins.options.impl.BasePluginOptionsBuilder;
 
@@ -8,8 +8,8 @@ public class ExampleOptions extends BasePluginOptionsBuilder {
 
 	@Override
 	public void registerOptions() {
-		boolOption(JadxExamplePlugin.PLUGIN_ID + ".enable")
-				.description("enable comment")
+		boolOption(JadxNameFigurerOuter.PLUGIN_ID + ".enable")
+				.description("enable plugin")
 				.defaultValue(true)
 				.setter(v -> enable = v);
 	}

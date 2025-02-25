@@ -1,2 +1,2 @@
 
-rootProject.name = "jadx-example-plugin"
+rootProject.name = "jadx-name-figurer-outer"
