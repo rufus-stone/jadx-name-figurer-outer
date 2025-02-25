@@ -17,7 +17,7 @@ class JadxNameFigurerOuterTest {
 	public void jsonSimpleTest() throws Exception {
 		JadxArgs args = new JadxArgs();
 		args.getInputFiles().add(getSampleFile("jsonSimple.smali"));
-		// args.getInputFiles().add(getSampleFile("hello2.smali"));
+
 		try (JadxDecompiler jadx = new JadxDecompiler(args)) {
 			jadx.load();
 
