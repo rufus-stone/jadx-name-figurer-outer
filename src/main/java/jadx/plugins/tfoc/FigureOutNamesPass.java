@@ -28,18 +28,144 @@ public class FigureOutNamesPass implements JadxDecompilePass {
 
 	private static final Logger LOG = LoggerFactory.getLogger(FigureOutNamesPass.class);
 
-	// TODO: Add more methods, including opString and friends
+	// TODO: Add more methods, including optString() and friends
 	private static final List<String> jsonMethods = new ArrayList<>(List.of(
+			// JSON methods
 			"org.json.JSONObject.getString(Ljava/lang/String;)Ljava/lang/String;",
 			"org.json.JSONObject.getInt(Ljava/lang/String;)I",
 			"org.json.JSONObject.getLong(Ljava/lang/String;)J",
 			"org.json.JSONObject.getBoolean(Ljava/lang/String;)Z",
 			"org.json.JSONObject.getDouble(Ljava/lang/String;)D",
 
-			// Not actually JSON, but same idea
+			// Bundle methods
+			// TODO: Add tests for these
 			"android.os.Bundle.getString(Ljava/lang/String;)Ljava/lang/String;",
 			"android.os.Bundle.getInt(Ljava/lang/String;I)I",
 			"android.os.Bundle.getBoolean(Ljava/lang/String;Z)Z"));
+
+	public static String formatNewName(String rawName) {
+		LOG.debug("Raw name: {}", rawName);
+
+		// Expect inputs to be of the format ("name") with surrounding parentheses and
+		// double quotes, so need minimum of 5 chars
+		if (rawName.length() <= 4) {
+			return null;
+		}
+
+		String newName = rawName.substring(0, rawName.length() - 2).substring(2);
+		newName = newName.replace('.', '_');
+		LOG.debug("New name: {}", newName);
+
+		if (NameMapper.isValidIdentifier(newName)) {
+			return newName;
+		} else {
+			return null;
+		}
+	}
+
+	public static void handleInvoke(InsnNode insn) {
+		LOG.debug("Handling INVOKE");
+
+		InvokeNode invokeNode = ((InvokeNode) insn);
+
+		LOG.debug("as InvokeNode: {}", invokeNode);
+		LOG.debug("getInstanceArg: {}", invokeNode.getInstanceArg());
+		LOG.debug("getResult: {}", invokeNode.getResult());
+
+		RegisterArg result = invokeNode.getResult();
+		MethodInfo invokedMethod = invokeNode.getCallMth();
+
+		LOG.debug("invokedMethod: {}", invokedMethod.getRawFullId());
+
+		if (jsonMethods.contains(invokedMethod.getRawFullId())) {
+			LOG.debug("It's a JSON method!");
+			InsnArg invokeArg = invokeNode.getArg(1);
+
+			LOG.debug("Invoked with arg: {} ({})", invokeArg, invokeArg.getType());
+
+			String newName = formatNewName(invokeArg.toString());
+
+			// Rename the local variable
+			if (newName != null) {
+				result.setName(newName);
+			}
+		}
+
+	}
+
+	public static void handleIput(InsnNode insn) {
+		LOG.debug("Handling IPUT");
+
+		IndexInsnNode idxNode = ((IndexInsnNode) insn);
+
+		LOG.debug("as IndexInsnNode: {}", idxNode);
+		LOG.debug("as getIndex: {}", idxNode.getIndex());
+
+		if (!(idxNode.getIndex() instanceof FieldInfo)) {
+			return;
+		}
+
+		FieldInfo destFieldInfo = ((FieldInfo) idxNode.getIndex());
+
+		LOG.debug("destFieldInfo: {}", destFieldInfo);
+		LOG.debug("destFieldInfo.getFullId(): {}", destFieldInfo.getFullId());
+		LOG.debug("destFieldInfo.getDeclClass(): {}", destFieldInfo.getDeclClass());
+
+		if (!insn.containsWrappedInsn()) {
+			return;
+		}
+
+		if (insn.getArgsCount() != 2) {
+			return;
+		}
+
+		InsnArg arg0 = insn.getArg(0);
+		InsnArg arg1 = insn.getArg(1);
+
+		LOG.debug("arg0 ({}): {}", arg0.getType(), arg0);
+		LOG.debug("arg1 ({}): {}", arg1.getType(), arg1);
+
+		if (!(arg0 instanceof InsnWrapArg)) {
+			return;
+		}
+
+		if (!arg0.isInsnWrap()) {
+			return;
+		}
+
+		InsnNode wrappedInsn = arg0.unwrap();
+
+		if (wrappedInsn.getType() != InsnType.INVOKE) {
+			return;
+		}
+
+		InvokeNode invokeNode = ((InvokeNode) wrappedInsn);
+
+		// TODO: Make this more sensible, as some methods we want to look for take
+		// different numbers of args
+		if (invokeNode.getArgsCount() < 2) { // != 2) {
+			return;
+		}
+		MethodInfo invokedMethod = invokeNode.getCallMth();
+
+		LOG.debug("arg0: invokeNode: {}", invokeNode);
+		LOG.debug("arg0: invokedMethod: {}", invokedMethod.getRawFullId());
+
+		if (jsonMethods.contains(invokedMethod.getRawFullId())) {
+			LOG.debug("It's a JSON method!");
+			InsnArg invokeArg = invokeNode.getArg(1);
+
+			LOG.debug("Invoked with arg: {} ({})", invokeArg, invokeArg.getType());
+
+			String newName = formatNewName(invokeArg.toString());
+
+			// Rename the field
+			if (newName != null) {
+				destFieldInfo.setAlias(newName);
+			}
+
+		}
+	}
 
 	@Override
 	public JadxPassInfo getInfo() {
@@ -74,92 +200,24 @@ public class FigureOutNamesPass implements JadxDecompilePass {
 
 			for (InsnNode insn : insns) {
 				LOG.debug("\n\n+++++++++++++++++++++++++++++++++++\n\n");
-				// LOG.debug("basicBlock insn: {}", insn);
+				LOG.debug("basicBlock insn: {}", insn);
 				LOG.debug("basicBlock insn type: {}", insn.getType());
 
-				if (insn.getType() != InsnType.IPUT) {
-					continue;
-				}
-				LOG.debug("basicBlock insn: {}", insn);
+				// Handle IPUT or INVOKE
+				switch (insn.getType()) {
+					case INVOKE:
+						handleInvoke(insn);
+						break;
 
-				IndexInsnNode idxNode = ((IndexInsnNode) insn);
+					case IPUT:
+						handleIput(insn);
+						break;
 
-				LOG.debug("as IndexInsnNode: {}", idxNode);
-				LOG.debug("as getIndex: {}", idxNode.getIndex());
-
-				if (!(idxNode.getIndex() instanceof FieldInfo)) {
-					continue;
-				}
-
-				FieldInfo destFieldInfo = ((FieldInfo) idxNode.getIndex());
-
-				LOG.debug("destFieldInfo: {}", destFieldInfo);
-				LOG.debug("destFieldInfo.getFullId(): {}", destFieldInfo.getFullId());
-				LOG.debug("destFieldInfo.getDeclClass(): {}", destFieldInfo.getDeclClass());
-
-				if (!insn.containsWrappedInsn()) {
-					continue;
-				}
-
-				if (insn.getArgsCount() != 2) {
-					continue;
-				}
-
-				InsnArg arg0 = insn.getArg(0);
-				InsnArg arg1 = insn.getArg(1);
-				LOG.debug("arg0 ({}): {}", arg0.getType(), arg0);
-				LOG.debug("arg1 ({}): {}", arg1.getType(), arg1);
-
-				if (!(arg0 instanceof InsnWrapArg) || !(arg1 instanceof RegisterArg)) {
-					continue;
-				}
-
-				if (!arg0.isInsnWrap()) {
-					continue;
-				}
-
-				InsnNode wrappedInsn = arg0.unwrap();
-
-				if (wrappedInsn.getType() != InsnType.INVOKE) {
-					continue;
-				}
-
-				InvokeNode invokeNode = ((InvokeNode) wrappedInsn);
-
-				// TODO: Make this more sensible, as some methods we want to look for take
-				// different numbers of args
-				if (invokeNode.getArgsCount() < 2) { // != 2) {
-					continue;
-				}
-				MethodInfo invokedMethod = invokeNode.getCallMth();
-
-				LOG.debug("arg0: invokeNode: {}", invokeNode);
-				LOG.debug("arg0: invokedMethod: {}", invokedMethod.getRawFullId());
-
-				if (jsonMethods.contains(invokedMethod.getRawFullId())) {
-					LOG.debug("It's a JSON method!");
-					InsnArg invokeArg = invokeNode.getArg(1);
-
-					LOG.debug("Invoked with arg: {} ({})", invokeArg, invokeArg.getType());
-
-					String newName = invokeArg.toString();
-					if (newName.length() <= 4) {
+					default:
+						LOG.debug("Skipping as not INVOKE or IPUT");
 						continue;
-					}
-
-					// Trim off the leading (" and trailing ")
-					newName = newName.substring(0, newName.length() - 2).substring(2);
-					newName = newName.replace('.', '_');
-					LOG.debug("New name: {}", newName);
-
-					// Rename the field
-					if (NameMapper.isValidIdentifier(newName)) {
-						destFieldInfo.setAlias(newName);
-					}
-
 				}
 			}
-
 		}
 	}
 }

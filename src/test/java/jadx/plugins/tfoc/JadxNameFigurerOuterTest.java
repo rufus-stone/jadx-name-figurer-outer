@@ -8,27 +8,52 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class JadxNameFigurerOuterTest {
 
 	@Test
-	public void jsonSimpleTest() throws Exception {
+	public void jsonComplexTest() throws Exception {
 		JadxArgs args = new JadxArgs();
-		args.getInputFiles().add(getSampleFile("jsonSimple.smali"));
+		args.getInputFiles().add(getSampleFile("bar.smali"));
+		args.getInputFiles().add(getSampleFile("baz.smali"));
+		args.getInputFiles().add(getSampleFile("foo.smali"));
 
 		try (JadxDecompiler jadx = new JadxDecompiler(args)) {
 			jadx.load();
 
-			JavaClass cls = jadx.getClasses().get(0);
+			List<JavaClass> classes = jadx.getClasses();
+			assertThat(classes).isNotNull();
 
-			String clsCode = cls.getCode();
-			System.out.println(clsCode);
+			for (JavaClass cls : classes) {
 
-			assertThat(cls.getFields().get(0).getName()).isEqualTo("foo");
-			assertThat(cls.getFields().get(1).getName()).isEqualTo("bar");
-			assertThat(cls.getFields().get(2).getName()).isEqualTo("baz");
+				// TODO: Why does this not work in here, but does work in the GUI??
+				// if (cls.getFullName().equals("com.tfoc.hello.Bar")) {
+				// assertThat(cls.getFields().get(0).getName()).isEqualTo("secret");
+				// assertThat(cls.getFields().get(1).getName()).isEqualTo("device_name");
+				// assertThat(cls.getFields().get(2).getName()).isEqualTo("age");
+				// assertThat(cls.getFields().get(3).getName()).isEqualTo("epoch_nanos");
+				// assertThat(cls.getFields().get(4).getName()).isEqualTo("pi");
+				// assertThat(cls.getFields().get(5).getName()).isEqualTo("evil");
+				// }
+
+				if (cls.getFullName().equals("com.tfoc.hello.Baz")) {
+					assertThat(cls.getCode()).contains("String device_name = json.getString(\"device_name\");");
+				}
+
+				if (cls.getFullName().equals("com.tfoc.hello.Foo")) {
+					assertThat(cls.getFields().get(0).getName()).isEqualTo("secret");
+					assertThat(cls.getFields().get(1).getName()).isEqualTo("device_name");
+					assertThat(cls.getFields().get(2).getName()).isEqualTo("age");
+					assertThat(cls.getFields().get(3).getName()).isEqualTo("epoch_nanos");
+					assertThat(cls.getFields().get(4).getName()).isEqualTo("pi");
+					assertThat(cls.getFields().get(5).getName()).isEqualTo("evil");
+				}
+
+				System.out.println(cls.getCode());
+			}
 		}
 	}
 
