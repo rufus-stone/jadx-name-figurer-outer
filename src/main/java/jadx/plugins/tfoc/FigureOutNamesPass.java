@@ -30,12 +30,24 @@ public class FigureOutNamesPass implements JadxDecompilePass {
 
 	// TODO: Add more methods, including optString() and friends
 	private static final List<String> jsonMethods = new ArrayList<>(List.of(
-			// JSON methods
+			// JSON get* methods
 			"org.json.JSONObject.getString(Ljava/lang/String;)Ljava/lang/String;",
 			"org.json.JSONObject.getInt(Ljava/lang/String;)I",
 			"org.json.JSONObject.getLong(Ljava/lang/String;)J",
 			"org.json.JSONObject.getBoolean(Ljava/lang/String;)Z",
 			"org.json.JSONObject.getDouble(Ljava/lang/String;)D",
+
+			// JSON opt* methods
+			"org.json.JSONObject.optString(Ljava/lang/String;)Ljava/lang/String;",
+			"org.json.JSONObject.optString(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+			"org.json.JSONObject.optInt(Ljava/lang/String;)I",
+			"org.json.JSONObject.optInt(Ljava/lang/String;I)I",
+			"org.json.JSONObject.optLong(Ljava/lang/String;)J",
+			"org.json.JSONObject.optLong(Ljava/lang/String;J)J",
+			"org.json.JSONObject.optDouble(Ljava/lang/String;)D",
+			"org.json.JSONObject.optDouble(Ljava/lang/String;D)D",
+			"org.json.JSONObject.optBoolean(Ljava/lang/String;)Z",
+			"org.json.JSONObject.optBoolean(Ljava/lang/String;Z)Z",
 
 			// Bundle methods
 			// TODO: Add tests for these

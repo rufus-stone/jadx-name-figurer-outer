@@ -57,6 +57,39 @@ class JadxNameFigurerOuterTest {
 		}
 	}
 
+	@Test
+	public void jsonOptTest() throws Exception {
+		JadxArgs args = new JadxArgs();
+		args.getInputFiles().add(getSampleFile("optFoo.smali"));
+
+		try (JadxDecompiler jadx = new JadxDecompiler(args)) {
+			jadx.load();
+
+			List<JavaClass> classes = jadx.getClasses();
+			assertThat(classes).isNotNull();
+
+			for (JavaClass cls : classes) {
+
+				if (cls.getFullName().equals("com.tfoc.hello.OptFoo")) {
+					assertThat(cls.getFields().get(0).getName()).isEqualTo("secret");
+					assertThat(cls.getFields().get(1).getName()).isEqualTo("device_name");
+					assertThat(cls.getFields().get(2).getName()).isEqualTo("age");
+					assertThat(cls.getFields().get(3).getName()).isEqualTo("missing_int");
+					assertThat(cls.getFields().get(4).getName()).isEqualTo("epoch_nanos");
+					assertThat(cls.getFields().get(5).getName()).isEqualTo("missing_long");
+					assertThat(cls.getFields().get(6).getName()).isEqualTo("pi");
+					assertThat(cls.getFields().get(7).getName()).isEqualTo("missing_double");
+					assertThat(cls.getFields().get(8).getName()).isEqualTo("evil");
+					assertThat(cls.getFields().get(9).getName()).isEqualTo("missing_boolean");
+
+					assertThat(cls.getCode()).contains("String missing_string = json.optString(\"missing_string\");");
+				}
+
+				System.out.println(cls.getCode());
+			}
+		}
+	}
+
 	private File getSampleFile(String fileName) throws URISyntaxException {
 		URL file = getClass().getClassLoader().getResource("samples/" + fileName);
 		assertThat(file).isNotNull();
